@@ -1,0 +1,146 @@
+syntax = "proto3";
+
+// package Proto;
+
+/**
+ * 说明：
+ * s - server 服务端 代表本程序
+ * c - client 客户端 代表您的程序
+ * 相互通信发送 MessageWrapper 结构 接收方根据 type 将 payload 解析成具体数据
+*/
+
+enum MessageType {
+  MESSAGE_UNKNOWN_TYPE = 0; // 无效
+  MESSAGE_ROOM_REQ = 1;     // c->s 请求直播间信息 payload = Req
+  MESSAGE_ROOMS = 2;        // s->c 直播间信息 payload = RoomLives
+                            //      发送时机：1 客户端请求时 2 有新的直播间信息时
+  MESSAGE_GIFT_REQ = 3;     // c->s 请求礼物信息 payload = Req
+  MESSAGE_GIFTS = 4;        // s->c 礼物信息 payload = Gifts
+                            //      发送时机：1 客户端请求时 2 有新的礼物信息时
+  MESSAGE_USERACTIONS = 5;  // s->c 用户动作信息 payload = UserActions
+                            //      发送时机：有新的用户动作信息时
+}
+
+// 消息包装
+message MessageWrapper {
+  MessageType type = 1;     // 消息类型
+  bytes payload = 2;        // 二进制序列化数据 xxx.serializeBinary()
+}
+
+// 请求数据
+message Req {
+  string id = 1;            // 请求目标数据的ID 空字符串 '' 代表请求所有
+}
+
+// 礼物信息
+message Gift {
+  string id = 1;            // ID
+  string name = 2;          // 名称
+  int32 diamond = 3;        // 单价
+  string image = 4;         // 图片url
+}
+
+// 礼物信息（多个）
+message Gifts {
+  repeated Gift gifts = 1;
+}
+
+// 主播/房间所有者 信息
+message Anchor {
+  string id_str = 1;        // 个人ID
+  string sec_uid = 2;       // 个人主页网址ID https://www.douyin.com/user/{sec_uid}
+  string nickname = 3;      // 昵称
+  string avatar_thumb = 4;  // 头像URL
+}
+
+// 房间的一些设置
+message RoomAuth {
+  bool UserCard = 1;        // 用户信息是否公开 false-匿名 用户id='111111' 昵称带*号
+}
+
+// 房间信息
+message Room {
+  string id_str = 1;        // 房间ID = RoomLive.id
+  int32 status = 2;         // 2-直播中
+  string title = 3;         // 房间标题
+  string cover = 4;         // 封面URL
+  Anchor owner = 5;         // 房间所有者信息 多数情况与 RoomLive.anchor 相同
+  repeated string admin_user_ids = 6; // 管理员用户ID列表
+  RoomAuth room_auth = 7;   // 房间设置
+  int32 online_count = 8;   // 在线人数
+  int32 like_count = 9;     // 点赞总数
+  int32 follow_count = 10;  // 关注总数
+  int32 share_total_count = 11;  // 分享总数
+}
+
+// 直播间信息
+message RoomLive {
+  string id = 1;            // 直播间ID
+  string web_rid = 2;       // 直播间地址ID https://live.douyin.com/{web_rid}
+  string qrcode_url = 3;    // 二维码URL
+  Anchor anchor = 4;        // 主播信息
+  Room room = 5;            // 房间信息
+}
+
+// 直播间信息（多个）
+message RoomLives {
+  repeated RoomLive room_lives = 1;
+}
+
+// 消费等级
+message PayGrade {
+  int32 level = 1;          // 等级
+}
+
+// 粉丝俱乐部
+message FansClub {
+  string anchor_id = 1;     // 主播ID
+  int32 level = 2;          // 等级
+  int32 user_fans_club_status = 3;  // 未知 0-? 1-? 2-?
+}
+
+// 用户信息
+message User {
+  string id = 1;            // 个人ID
+  string sec_uid = 2;       // 个人主页网址ID https://www.douyin.com/user/{sec_uid}
+  string display_id = 3;    // 抖音号
+  string nickname = 4;      // 昵称
+  string avatar_thumb = 5;  // 头像URL
+  int32 level = 6;          // ?等级
+  int32 gender = 7;         // 0-未知 1-男 2-女
+  PayGrade pay_grade = 8;   // 消费等级
+  string webcast_uid = 9;   // 未知功能 当直播间设置观众匿名时 id都是111111 昵称带*号 只有这个字段有意义
+  FansClub fans_club = 10;  // 粉丝俱乐部
+}
+
+// 用户动作类别
+enum UserActionType {
+  USERACTION_UNKNOWN_TYPE = 0; // 无效
+  USERACTION_MEMBER = 1;    // 来了
+  USERACTION_CHAT = 2;      // 聊天
+  USERACTION_GIFT = 3;      // 礼物
+  USERACTION_LIKE = 4;      // 点赞
+  USERACTION_SOCIAL = 5;    // 关注、取消关注、分享
+}
+
+// 用户动作信息
+message UserAction {
+  string room_info_id = 1;  // 直播间ID
+  User user = 2;            // 用户信息
+  int64 timestamp = 3;      // 时间戳(ms)
+  UserActionType type = 4;  // 动作类型
+  string param_str = 5;     /* 字符串参数
+                                type == CHAT: 聊天内容
+                                type == GIFT: 赠送礼物ID
+                            */
+  int32 param_int = 6;      /* 数字参数
+                                type == GIFT: 本次赠送礼物数量
+                                type == LIKE: 本次点赞数量
+                                type == SOCIAL: 1-关注 2-取消关注 3-分享
+                            */
+}
+
+// 用户动作信息（多个）
+message UserActions {
+  repeated UserAction user_actions = 1;
+}
